@@ -1,6 +1,4 @@
 <?php
-// include 'simple_html_dom.php';
-// require_once 'html5/bin/html5-parse.php';
 include 'ganon.php';
 include 'EMail.php';
 
@@ -34,19 +32,6 @@ class MailArchive {
     private function getSubjectContent($year,$month,$subject){
         $url = "{$this->main_url}/{$this->listName}/{$year}-{$month}/{$subject}.html";
         return $this->simplePostRequest($url);
-    }
-
-    //To get the exact body from a raw mail body (exclude the threaded mail)
-    private function getBodyFromRawBody($body) {
-        $lines = explode("\n", $body);
-        $body = array();
-        foreach ($lines as $key => $line) {
-            if( preg_match("/^.*&gt;.+?$/", $line) == 0) {
-                $body[] = $line;
-            }
-        }
-        $body = implode("\n",$body);
-        return $body;
     }
 
     private function getAvailableMonths() {
@@ -85,8 +70,6 @@ class MailArchive {
         $authorEmailID = trim(str_replace(" at ","@",$authorEmailID[1]));
         preg_match('/<PRE>(.+)<\/PRE>/is', $email, $body);
         $body = $body[1];
-        // $body = preg_replace('|(&gt;)+?<i>(.*?)</i>|is', '', $body);
-        // $body = $this->getBodyFromRawBody($body);
         preg_match('/<I>(.+)<\/I>/i', $email, $date_sent);
         $date_sent = $date_sent[1];
 
@@ -176,17 +159,3 @@ class MailArchive {
         }
     }
 }
-
-
-$ma = new MailArchive('forum_justnetcoalition.org','forum@JNC','forum@justnetcoalition.org','http://justnetcoalition.org/mailman/private');
-
-
-$allMails = $ma->getAllMails('January','2015');
-$threadedMails = $ma->parseMonthlyArchiveByThread('January','2015');
-echo $allMails['000659'] === $threadedMails['000659'] ? 'Yes' : 'No';
-//$ma->printThread();
-
-//foreach ($allMails as $key => $mail) {
-//    $mail->printMail();
-//    echo "\n";
-//}
