@@ -9,6 +9,7 @@ class MailArchive {
     private $main_url;
     private $mails;
     private $mailMonths;
+    private $thread;
 
     function __construct($name, $password, $email, $main_url) {
         $this->listName = $name;
@@ -16,6 +17,7 @@ class MailArchive {
         $this->adminEmail = $email;
         $this->main_url = $main_url;
         $this->mails = null;
+        $this->thread = null;
         $this->mailMonths = $this->getAvailableMonths();
     }
 
@@ -52,14 +54,14 @@ class MailArchive {
         return $availableMonths;
     }
 
-    public function printAvailableMonths() {
-        foreach ($this->mailMonths as $year => $months) {
-            echo "{$year}\n";
-            foreach ($months as $key => $month) {
-                echo "\t{$month}\n";
-            }
-        }
-    }
+//    public function printAvailableMonths() {
+//        foreach ($this->mailMonths as $year => $months) {
+//            echo "{$year}\n";
+//            foreach ($months as $key => $month) {
+//                echo "\t{$month}\n";
+//            }
+//        }
+//    }
 
     private function parseEmail($mailID, $email) {
         preg_match('/<H1>(.+)<\/H1>/i', $email, $title);
@@ -76,7 +78,7 @@ class MailArchive {
         return new Email($mailID, $title, $author, $authorEmailID ,$body,$date_sent);
     }
 
-    public function parseMonthlyArchiveByThread($month, $year) {
+    private function parseMonthlyArchiveByThread($month, $year) {
         $content = $this->getSubjectContent($year,$month,'thread');
         $content = preg_replace("/[\n\t\r]+/",'',$content);
         $dom = str_get_dom($content);
@@ -107,27 +109,28 @@ class MailArchive {
         return $parsedMails;
     }
 
-    public function getAllMails($startMonth='January', $startYear='0') {
+    public function getAllMails($startMonth='January', $startYear='0', $view) {
+        $this->thread = $this->thread;
         if(!$this->mails) {
+            $this->mails = array();
+            $this->thread = array();
+            $sortingOrder = $view!='thread' ? $view : '';
             foreach ($this->mailMonths as $year => $months) {
                 if($year < $startYear) {
                     continue;
                 } elseif ($year > $startYear) {
-                    if(!$this->mails)
                         $this->mails = array();
                     foreach ($months as $key => $month) {
-                        $this->mails = array_merge($this->mails,
-                            $this->parseMonthlyArchive($month, $year));
+                        $this->mails[$year."-".$month] = $this->parseMonthlyArchive($month, $year, $sortingOrder);
+                        $this->thread[$year."-".$month] = $this->parseMonthlyArchiveByThread($month,$year);
                     }
                 } else {
-                    if(!$this->mails)
-                        $this->mails = array();
                     foreach ($months as $key => $month) {
                         if($key < date_parse($startMonth)['month']) {
                             continue;
                         }
-                        $this->mails = array_merge($this->mails,
-                            $this->parseMonthlyArchive($month, $year));
+                        $this->mails[$year."-".$month] = $this->parseMonthlyArchive($month, $year, $sortingOrder);
+                        $this->thread[$year."-".$month] = $this->parseMonthlyArchiveByThread($month,$year);
                     }
                 }
             }
@@ -135,7 +138,7 @@ class MailArchive {
         return $this->mails;
     }
 
-    public function parseMonthlyArchive($month, $year, $archiveType = 'date') {
+    private function parseMonthlyArchive($month, $year, $archiveType = 'date') {
         $content = $this->getSubjectContent($year,$month, $archiveType);
         preg_match_all('/(?:([0-9]{6})\.html)/', $content,$matches);
         $mails = array();
@@ -145,17 +148,5 @@ class MailArchive {
             $mails[$mailID] = $mail;
         }
         return $mails;
-    }
-
-    public function printThread($mailList=null, $indent=''){
-        if($mailList==null)
-            $mailList=$this->mails;
-        foreach($mailList as $mailUIN => $mail) {
-            echo $indent.$mail->getSubject();
-            if($mail->hasChild()) {
-                $childMails = $mail->getChildren();
-                $this->printThread($childMails,$indent."\t");
-            }
-        }
     }
 }
